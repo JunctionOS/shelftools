@@ -1,22 +1,74 @@
 # `jiftools`
 
-A library and collection of tools to parse, write and modify JIF files (Junction Image Format).
+Rust library and one command-line tool for reading, modifying, comparing, and
+tracing JIF files (Junction Image Format).
 
-## What is the Junction Image Format
+The active workspace has three crates:
 
-![image](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbATHOX0wE_ZyLXKY-EJafCbYyPLtyTkNXmg&s)
+| Crate | Purpose |
+| --- | --- |
+| [`jif`](jif/README.md) | Core JIF data model, parser, writer, and transformations. |
+| [`jiftool`](jiftool/README.md) | Single CLI for inspection, mutation, comparison, trace context, and plotting. |
+| [`tracer-format`](tracer-format/README.md) | Parser for Junction timestamped access traces. |
 
-If you know you know.
+The JIF format specification is reserved for [`SPEC.md`](SPEC.md); that file is
+currently a placeholder. For code layout, start with
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-Moreover, you can find the specification for the JIF in [here](SPEC.md).
+## Quick Start
 
-## Repo Structure
+Build everything:
 
-The repo has three main components:
- - [`jif`](jif/README.md): the library that holds the main functionality and modelling for JIF files;
- - [`tracer-format`](tracer-format/README.md): the library to decode memory traces from junction;
- - [`readjif`](readjif/README.md): a tool to read, view and query JIF files
- - [`jiftool`](jiftool/README.md): a tool to change JIF files (by building interval trees, adding ordering segments)
- - [`cmpjif`](cmpjif/README.md): a tool to produce [upset plots](https://en.wikipedia.org/wiki/UpSet_plot) of the private data held by JIFs
- - [`timejif`](timejif/README.md): a tool to produce plots of unique page accesses over time
- - [`tracejif`](tracejif/README.md): a tool to enhance memory traces with VMA information
+```sh
+cargo build --workspace
+```
+
+Run the test suite:
+
+```sh
+cargo test --workspace
+```
+
+Inspect a JIF:
+
+```sh
+cargo run -p jiftool -- read image.jif
+cargo run -p jiftool -- read image.jif pheaders --start 0 --end 5
+cargo run -p jiftool -- read image.jif ord
+```
+
+Check that a file parses:
+
+```sh
+cargo run -p jiftool -- check image.jif
+cargo run -p jiftool -- check --raw image.jif
+```
+
+Write a modified JIF:
+
+```sh
+cargo run -p jiftool -- modify input.jif output.jif build-itrees
+cargo run -p jiftool -- modify input.jif output.jif rename /usr/bin/ld.so /bin/ld.so
+cargo run -p jiftool -- modify input.jif ordered.jif add-ord trace.ord
+```
+
+Trace and compare:
+
+```sh
+cargo run -p jiftool -- trace image.jif trace.ord
+cargo run -p jiftool -- compare a.jif b.jif
+cargo run -p jiftool -- time image.jif trace.ord access-plot
+```
+
+## Where Things Live
+
+- `jif/src/jif.rs` owns `Jif`, `JifRaw`, whole-file operations, summaries, and
+  address resolution helpers.
+- `jif/src/ord.rs` owns ordering chunks and ordering-section stats.
+- `jif/src/itree/` owns interval-tree data structures and transformations.
+- `jif/src/read/` and `jif/src/write/` own binary parsing and serialization.
+- `jiftool/src/main.rs` owns top-level command routing.
+- `jiftool/src/commands/` owns user-facing behavior for each subcommand.
+- `jiftool/src/io.rs`, `digest.rs`, and `python.rs` contain reusable CLI
+  helpers.
+- `tracer-format/src/` owns trace parsing and deduplication.

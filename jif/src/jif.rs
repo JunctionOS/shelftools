@@ -7,7 +7,7 @@ use crate::itree::interval::{AnonIntervalData, LogicalInterval, RawInterval, Ref
 use crate::itree::interval::{DataSource, IntervalData};
 use crate::itree::itree_node::{ITreeNode, IntermediateITreeNode, RawITreeNode};
 use crate::itree::ITree;
-use crate::ord::OrdChunk;
+use crate::ord::{OrdChunk, OrdStats};
 use crate::pheader::{JifPheader, JifRawPheader};
 use crate::utils::{page_align, PAGE_SIZE};
 use crate::{error::*, Prot};
@@ -47,6 +47,24 @@ pub struct JifRaw {
     pub(crate) n_write_prefetch: u64,
     pub(crate) data_offset: u64,
     pub(crate) data_segments: BTreeMap<(u64, u64), Vec<u8>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JifSummary {
+    pub pheaders: usize,
+    pub ord_chunks: usize,
+    pub pages: usize,
+    pub private_pages: usize,
+    pub shared_pages: usize,
+    pub zero_pages: usize,
+    pub intervals: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TraceContext<'a> {
+    pub addr: u64,
+    pub source: Option<DataSource>,
+    pub pheader: Option<&'a JifPheader>,
 }
 
 #[allow(dead_code)]
@@ -288,6 +306,22 @@ impl Jif {
         &self.ord_chunks
     }
 
+    pub fn summary(&self) -> JifSummary {
+        JifSummary {
+            pheaders: self.pheaders.len(),
+            ord_chunks: self.ord_chunks.len(),
+            pages: self.total_pages(),
+            private_pages: self.private_pages(),
+            shared_pages: self.shared_pages(),
+            zero_pages: self.zero_pages(),
+            intervals: self.n_intervals(),
+        }
+    }
+
+    pub fn ord_stats(&self) -> OrdStats {
+        OrdStats::from_chunks(&self.ord_chunks)
+    }
+
     /// Compute the total number of zero pages encoded (by omission) in the [`Jif`]
     pub fn zero_pages(&self) -> usize {
         self.pheaders.iter().map(|phdr| phdr.zero_pages()).sum()
@@ -356,6 +390,18 @@ impl Jif {
             .iter()
             .find(|phdr| phdr.mapps_addr(addr))
             .map(|phdr| phdr.resolve(addr))
+    }
+
+    pub fn source_at(&self, addr: u64) -> Option<DataSource> {
+        self.resolve(addr).map(|interval| interval.source)
+    }
+
+    pub fn trace_context(&self, addr: u64) -> TraceContext<'_> {
+        TraceContext {
+            addr,
+            source: self.source_at(addr),
+            pheader: self.mapping_pheader(addr),
+        }
     }
 
     /// Resolve an address into the private data
@@ -945,6 +991,7 @@ pub(crate) mod test {
                 n_pages: 1,
                 kind: DataSource::Zero,
                 is_written_to: false,
+                phdr: 0,
             },
             OrdChunk {
                 timestamp_us: 0,
@@ -952,6 +999,7 @@ pub(crate) mod test {
                 n_pages: 1,
                 kind: DataSource::Zero,
                 is_written_to: false,
+                phdr: 0,
             },
             OrdChunk {
                 timestamp_us: 0,
@@ -959,6 +1007,7 @@ pub(crate) mod test {
                 n_pages: 1,
                 kind: DataSource::Zero,
                 is_written_to: false,
+                phdr: 0,
             },
             OrdChunk {
                 timestamp_us: 0,
@@ -966,6 +1015,7 @@ pub(crate) mod test {
                 n_pages: 1,
                 kind: DataSource::Zero,
                 is_written_to: false,
+                phdr: 0,
             },
             OrdChunk {
                 timestamp_us: 0,
@@ -973,6 +1023,7 @@ pub(crate) mod test {
                 n_pages: 2,
                 kind: DataSource::Zero,
                 is_written_to: false,
+                phdr: 0,
             },
             OrdChunk {
                 timestamp_us: 0,
@@ -980,6 +1031,7 @@ pub(crate) mod test {
                 n_pages: 1,
                 kind: DataSource::Zero,
                 is_written_to: false,
+                phdr: 0,
             },
         ];
 

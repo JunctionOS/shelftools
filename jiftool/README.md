@@ -1,84 +1,56 @@
 # `jiftool`
 
-A tool for modifying JIF files
+One CLI for working with JIF files.
 
-## Example usage:
+## Commands
+
 ```sh
-$ jiftool orig.jif terse.jif # remove duplicate strings, etc.
-$ jiftool orig.jif new.jif rename /usr/bin/ld.so /bin/ld.so # rename path to `ld.so`
-$ jiftool orig.jif itree.jif build-itrees # build interval trees
-$ jiftool orig.jif ordered.jif add-ord tsa.ord # add an ordering section
+jiftool read <JIF> [summary|pheaders|ord|raw]
+jiftool check [--raw] <JIF>
+jiftool modify <INPUT> <OUTPUT> <operation>
+jiftool trace <JIF> <TRACE>
+jiftool compare [OPTIONS] <JIF> <JIF>...
+jiftool time <JIF> <TRACE> <OUTPUT>
 ```
 
-## Usage Reference
+## Examples
 
-### Basic
+Inspect a file:
 
-```
-$ jiftool --help
-Modify JIF files
-
-Usage: jiftool [OPTIONS] <FILE> <FILE> [COMMAND]
-
-Commands:
-  rename        Rename a referenced file in the JIF
-  build-itrees  Build the interval trees in the JIF
-  add-ord       Add an ordering section
-  help          Print this message or the help of the given subcommand(s)
-
-Arguments:
-  <FILE>  Input file path
-  <FILE>  Output file path
-
-Options:
-      --show     Whether to print out the resulting JIF
-  -h, --help     Print help
-  -V, --version  Print version
+```sh
+jiftool read image.jif
+jiftool read image.jif pheaders --start 0 --end 5
+jiftool read image.jif ord
+jiftool read image.jif raw summary
 ```
 
-### Rename
+Validate parsing:
 
-```
-$ jiftool help rename
-Rename a referenced file in the JIF
-
-Usage: jiftool <FILE> <FILE> rename <FILE> <FILE>
-
-Arguments:
-  <FILE>  Old name
-  <FILE>  New name
-
-Options:
-  -h, --help  Print help
+```sh
+jiftool check image.jif
+jiftool check --raw image.jif
 ```
 
-### Build Interval Trees
+Modify a file:
 
-```
-$ jiftool help build-itrees
-Build the interval trees in the JIF
-
-Usage: jiftool <FILE> <FILE> build-itrees
-
-Options:
-  -h, --help  Print help
+```sh
+jiftool modify input.jif output.jif rewrite
+jiftool modify input.jif output.jif rename /usr/bin/ld.so /bin/ld.so
+jiftool modify input.jif output.jif build-itrees
+jiftool modify input.jif output.jif add-ord trace.ord
 ```
 
-### Adding an Ordering section
+Work with traces:
 
+```sh
+jiftool trace image.jif trace.ord
+jiftool time image.jif trace.ord access-plot
 ```
-$ jiftool help add-ord
-Add an ordering section
 
-Ingests a timestamped access log (each line of format `<usecs>: <address>`) to construct the ordering list
+Compare snapshots:
 
-Usage: jiftool <FILE> <FILE> add-ord [FILE]
-
-Arguments:
-  [FILE]
-          Filepath of the timestamped access log (defaults to `stdin`)
-
-Options:
-  -h, --help
-          Print help (see a summary with '-h')
+```sh
+jiftool compare a.jif b.jif
+jiftool compare --private a.jif b.jif
+jiftool compare --ordering --output upset.pdf a.jif b.jif c.jif
 ```

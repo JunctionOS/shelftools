@@ -14,6 +14,10 @@ mod read;
 mod write;
 
 pub use jif::{Jif, JifRaw};
+pub use jif::{JifSummary, TraceContext};
+pub use ord::OrdStats;
 pub use pheader::Prot;
 
 pub use error::{JifError, JifResult};
+
+pub const PAGE_SIZE: usize = utils::PAGE_SIZE;

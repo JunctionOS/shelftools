@@ -1,6 +1,6 @@
 [workspace]
 
-members = [ "cmpjif", "jif", "jiftool", "readjif", "tracejif", "tracer-format", "timejif", ]
+members = ["jif", "jiftool", "tracer-format"]
 
 resolver = "2"
 

@@ -25,6 +25,22 @@ pub enum DataSource {
     Private,
 }
 
+impl DataSource {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            DataSource::Zero => "zero",
+            DataSource::Shared => "shared",
+            DataSource::Private => "private",
+        }
+    }
+}
+
+impl std::fmt::Display for DataSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Interval representation
 ///
 /// We consider an interval valid if `start != u64::MAX` and `end != u64::MAX`
@@ -690,6 +706,13 @@ impl TryFrom<RefIntervalData> for AnonIntervalData {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn data_source_has_stable_labels() {
+        assert_eq!(DataSource::Zero.to_string(), "zero");
+        assert_eq!(DataSource::Shared.to_string(), "shared");
+        assert_eq!(DataSource::Private.to_string(), "private");
+    }
 
     #[test]
     fn intersect() {

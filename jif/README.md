@@ -5,9 +5,9 @@ A Rust crate for parsing, dumping and manipulating JIF (Junction Image Format) f
 The library is organized as follows:
 
  - The types that model JIFs are in `src/{jif,ord,pheader}.rs` and in [`src/itree`](src/itree).
- - The deduper (that coallesces equal segments of memory) is in `src/deduper.rs`.
+ - The deduper (that coalesces equal segments of memory) is in `src/deduper.rs`.
  - Error types are in [`src/error`](src/error)
- - Utilities are in `src/util.rs`
+ - Utilities are in `src/utils.rs`
  - The [`read`](src/read) directory contains all the parsing functionality
  - The [`write`](src/write) directory contains all the dumping functionality
 

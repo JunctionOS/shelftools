@@ -32,6 +32,46 @@ pub struct OrdChunk {
     pub(crate) phdr: usize,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct OrdStats {
+    pub pages: u64,
+    pub private_pages: u64,
+    pub shared_pages: u64,
+    pub zero_pages: u64,
+    pub written_to_pages: u64,
+    pub private_written_to_pages: u64,
+    pub shared_written_to_pages: u64,
+    pub zero_written_to_pages: u64,
+}
+
+impl OrdStats {
+    pub fn from_chunks(chunks: &[OrdChunk]) -> Self {
+        let mut stats = OrdStats::default();
+
+        for chunk in chunks {
+            let pages = chunk.size();
+            stats.pages += pages;
+
+            match chunk.kind() {
+                DataSource::Private => stats.private_pages += pages,
+                DataSource::Shared => stats.shared_pages += pages,
+                DataSource::Zero => stats.zero_pages += pages,
+            }
+
+            if chunk.written_to() {
+                stats.written_to_pages += pages;
+                match chunk.kind() {
+                    DataSource::Private => stats.private_written_to_pages += pages,
+                    DataSource::Shared => stats.shared_written_to_pages += pages,
+                    DataSource::Zero => stats.zero_written_to_pages += pages,
+                }
+            }
+        }
+
+        stats
+    }
+}
+
 impl OrdChunk {
     /// The size of the [`OrdChunk`] when serialized on disk
     pub(crate) const fn serialized_size() -> usize {
@@ -254,6 +294,29 @@ mod test {
         assert_eq!(ord.last_page_addr(), 0xa000);
     }
 
+    #[test]
+    fn ord_stats_count_pages_by_kind_and_write_status() {
+        let stats = OrdStats::from_chunks(&[
+            OrdChunk::new(0, 0x1000, 2, DataSource::Private, 0),
+            OrdChunk::new(0, 0x2000 | ORD_WRITE_FLAG, 3, DataSource::Shared, 0),
+            OrdChunk::new(0, 0x3000 | ORD_WRITE_FLAG, 5, DataSource::Zero, 0),
+        ]);
+
+        assert_eq!(
+            stats,
+            OrdStats {
+                pages: 10,
+                private_pages: 2,
+                shared_pages: 3,
+                zero_pages: 5,
+                written_to_pages: 8,
+                private_written_to_pages: 0,
+                shared_written_to_pages: 3,
+                zero_written_to_pages: 5,
+            }
+        );
+    }
+
     fn ord_fn(timestamp_us: u64, vaddr: u64) -> OrdChunk {
         OrdChunk::new(timestamp_us, vaddr, 1, DataSource::Zero, 0)
     }
@@ -266,7 +329,7 @@ mod test {
         ]);
 
         {
-            let mut ord = OrdChunk::new(0, 0x11000, 0x6, DataSource::Zero);
+            let mut ord = OrdChunk::new(0, 0x11000, 0x6, DataSource::Zero, 0);
 
             assert!(ord.merge_page(&jif, ord_fn(0, 0x10000)));
             assert_eq!(ord, OrdChunk::new(0, 0x10000, 0x7, DataSource::Zero, 0));
@@ -331,7 +394,7 @@ mod test {
             assert_eq!(ord, OrdChunk::new(50, 0x10000, 0x10, DataSource::Zero, 0));
 
             assert!(!ord.merge_page(&jif, ord_fn(0, 0x20000)));
-            assert_eq!(ord, OrdChunk::new(50, 0x10000, 0x10, DataSource::Zero), 0);
+            assert_eq!(ord, OrdChunk::new(50, 0x10000, 0x10, DataSource::Zero, 0));
         }
     }
 }

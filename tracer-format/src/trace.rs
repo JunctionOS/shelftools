@@ -22,6 +22,13 @@ pub fn read_trace<BR: BufRead>(reader: BR) -> Result<Vec<TimestampedAccess>, Tra
         .collect::<Result<Vec<_>, _>>()
 }
 
+/// Read a full recorded trace and keep only the first access to each page.
+pub fn read_deduped_trace<BR: BufRead>(
+    reader: BR,
+) -> Result<Vec<TimestampedAccess>, TraceReadError> {
+    read_trace(reader).map(dedup_trace)
+}
+
 /// Dedup a trace
 pub fn dedup_trace(log: Vec<TimestampedAccess>) -> Vec<TimestampedAccess> {
     // deduping:
@@ -124,6 +131,28 @@ mod test {
                 error: ParseTimestampedAccessError::BadAddr(_)
             })
         ));
+    }
+
+    #[test]
+    fn read_deduped() {
+        assert_eq!(
+            read_deduped_trace("10: 0x1000\n5: 0x1000\n7: 0x2000".as_bytes())
+                .unwrap()
+                .into_iter()
+                .collect::<HashSet<_>>(),
+            [
+                TimestampedAccess {
+                    usecs: 5,
+                    addr: 0x1000,
+                },
+                TimestampedAccess {
+                    usecs: 7,
+                    addr: 0x2000,
+                },
+            ]
+            .into_iter()
+            .collect::<HashSet<_>>()
+        );
     }
 
     #[test]
